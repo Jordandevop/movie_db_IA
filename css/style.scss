@@ -386,6 +386,107 @@ body {
   background-color: rgba(70, 211, 105, 0.1);
 }
 
+// Page Découvrir - Filtres
+.discover-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 15px;
+  align-items: end;
+  padding: 20px;
+  background-color: $secondary-color;
+  border: 1px solid $border-color;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  label {
+    font-size: 13px;
+    font-weight: 600;
+    color: $light-color;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  select,
+  input[type='number'] {
+    padding: 10px 12px;
+    border: 1px solid $border-color;
+    border-radius: 5px;
+    background-color: $dark-color;
+    color: $text-color;
+    font-size: 14px;
+
+    &:focus {
+      outline: none;
+      border-color: $primary-color;
+      box-shadow: 0 0 5px rgba(229, 9, 20, 0.3);
+    }
+  }
+}
+
+.filter-actions {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+
+  .btn {
+    padding: 10px 16px;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+}
+
+.active-filters-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.filter-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  background-color: rgba(229, 9, 20, 0.15);
+  border: 1px solid $primary-color;
+  border-radius: 20px;
+  color: $primary-color;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.results-count {
+  color: $light-color;
+  font-size: 14px;
+  margin-bottom: 5px;
+}
+
+.no-results {
+  @include flex-center;
+  flex-direction: column;
+  padding: 60px 20px;
+  text-align: center;
+  color: $light-color;
+  background-color: $secondary-color;
+  border-radius: 8px;
+  border: 1px solid $border-color;
+
+  p:first-child {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+
+  p:last-child {
+    font-size: 14px;
+    color: darken($light-color, 20%);
+  }
+}
+
 // Réactivité
 @media (max-width: 768px) {
   .navbar {
@@ -423,6 +524,19 @@ body {
     }
 
     #searchBtn {
+      width: 100%;
+    }
+  }
+
+  .discover-filters {
+    grid-template-columns: 1fr;
+    padding: 15px;
+  }
+
+  .filter-actions {
+    flex-direction: column;
+
+    .btn {
       width: 100%;
     }
   }
