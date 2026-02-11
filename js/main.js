@@ -559,6 +559,20 @@ function rankAndDisplay() {
   const yearBase = 1900;
   const yearRange = currentYear - yearBase || 1;
 
+  // Déterminer dynamiquement les genres "favoris" à partir des films filtrés
+  // (genres les plus fréquents dans cette sélection)
+  const genreFrequency = {};
+  filtered.forEach((movie) => {
+    (movie.genre_ids || []).forEach((genreId) => {
+      genreFrequency[genreId] = (genreFrequency[genreId] || 0) + 1;
+    });
+  });
+
+  const favoriteGenreIds = Object.entries(genreFrequency)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([id]) => parseInt(id, 10));
+
   const scored = filtered.map(movie => {
     const popNorm = ((movie.popularity || 0) - fPopMin) / fPopRange;
     const ratingNorm = (movie.vote_average || 0) / 10;
@@ -571,7 +585,31 @@ function rankAndDisplay() {
     const rawScore = (wPop * popNorm) + (wNote * ratingNorm) + (wRecentNorm * recencyNorm);
     const score = totalWeight > 0 ? (rawScore / totalWeight) * 10 : 0;
 
-    return { ...movie, _score: score };
+    // Déterminer les critères explicatifs dominants pour ce film
+    const isHighRating = (movie.vote_average || 0) >= 7.5;
+    const isRecent = movieYear >= currentYear - 5;
+    const matchesFavoriteGenres =
+      favoriteGenreIds.length > 0 &&
+      (movie.genre_ids || []).some((id) => favoriteGenreIds.includes(id));
+
+    const explanation = {
+      highRating: isHighRating,
+      recent: isRecent,
+      matchesFavoriteGenres,
+    };
+
+    // Si aucun critère n'est vrai, on force au moins celui qui contribue le plus
+    if (!explanation.highRating && !explanation.recent && !explanation.matchesFavoriteGenres) {
+      const contribRating = ratingNorm;
+      const contribRecency = recencyNorm;
+      if (contribRating >= contribRecency) {
+        explanation.highRating = true;
+      } else {
+        explanation.recent = true;
+      }
+    }
+
+    return { ...movie, _score: score, _explanation: explanation };
   });
 
   // Trier par score décroissant
@@ -600,6 +638,32 @@ function generateMovieGrid(movies) {
           <h3>${movie.title}</h3>
           <p class="rating">⭐ ${movie._score !== undefined ? movie._score.toFixed(1) : (movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A')}/10</p>
           <p class="release-date">${movie.release_date ? movie.release_date.split('-')[0] : 'N/A'}</p>
+          ${
+            movie._explanation
+              ? `
+          <div class="recommend-explanation">
+            <p class="recommend-explanation-title">Recommandé car :</p>
+            <ul class="recommend-explanation-list">
+              ${
+                movie._explanation.highRating
+                  ? '<li>✔ Note élevée</li>'
+                  : ''
+              }
+              ${
+                movie._explanation.recent
+                  ? '<li>✔ Film récent</li>'
+                  : ''
+              }
+              ${
+                movie._explanation.matchesFavoriteGenres
+                  ? '<li>✔ Correspond à vos genres favoris</li>'
+                  : ''
+              }
+            </ul>
+          </div>
+          `
+              : ''
+          }
         </div>
       `
         )
