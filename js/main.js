@@ -10,6 +10,9 @@ const apiKeyInput = document.getElementById('apiKeyInput');
 // Cache des genres pour éviter des appels API répétés
 let genresCache = null;
 
+// Cache des films pour la page recommandation (évite de refaire l'appel API à chaque slider)
+let recommendMoviesCache = null;
+
 /**
  * Charge et met en cache la liste des genres TMDB
  */
@@ -98,6 +101,7 @@ function setupRoutes() {
           <li><a href="#/search" data-route="/search">Recherche</a></li>
           <li><a href="#/popular" data-route="/popular">Populaires</a></li>
           <li><a href="#/discover" data-route="/discover">Découvrir</a></li>
+          <li><a href="#/recommend" data-route="/recommend">Recommandation</a></li>
         </ul>
       </nav>
       <div class="container">
@@ -127,6 +131,7 @@ function setupRoutes() {
           <li><a href="#/search" data-route="/search">Recherche</a></li>
           <li><a href="#/popular" data-route="/popular">Populaires</a></li>
           <li><a href="#/discover" data-route="/discover">Découvrir</a></li>
+          <li><a href="#/recommend" data-route="/recommend">Recommandation</a></li>
         </ul>
       </nav>
       <div class="container">
@@ -171,6 +176,7 @@ function setupRoutes() {
           <li><a href="#/search" data-route="/search">Recherche</a></li>
           <li><a href="#/popular" data-route="/popular">Populaires</a></li>
           <li><a href="#/discover" data-route="/discover">Découvrir</a></li>
+          <li><a href="#/recommend" data-route="/recommend">Recommandation</a></li>
         </ul>
       </nav>
       <div class="container">
@@ -192,6 +198,7 @@ function setupRoutes() {
           <li><a href="#/search" data-route="/search">Recherche</a></li>
           <li><a href="#/popular" data-route="/popular">Populaires</a></li>
           <li><a href="#/discover" data-route="/discover">Découvrir</a></li>
+          <li><a href="#/recommend" data-route="/recommend">Recommandation</a></li>
         </ul>
       </nav>
       <div class="container">
@@ -282,6 +289,61 @@ function setupRoutes() {
 
     // Chargement initial sans filtres
     applyDiscoverFilters();
+  });
+
+  // Page recommandation avec pondération configurable
+  router.register('/recommend', async () => {
+    appContainer.innerHTML = `
+      <nav class="navbar">
+        <h1>🎬 MovieDB Recommandation</h1>
+        <ul class="nav-links">
+          <li><a href="#/home" data-route="/home">Accueil</a></li>
+          <li><a href="#/search" data-route="/search">Recherche</a></li>
+          <li><a href="#/popular" data-route="/popular">Populaires</a></li>
+          <li><a href="#/discover" data-route="/discover">Découvrir</a></li>
+          <li><a href="#/recommend" data-route="/recommend">Recommandation</a></li>
+        </ul>
+      </nav>
+      <div class="container">
+        <h2>Recommandation Personnalisée</h2>
+        <p class="recommend-intro">Ajustez les curseurs pour personnaliser le classement des films selon vos préférences.</p>
+
+        <div class="weight-panel">
+          <div class="weight-group">
+            <label for="weightPopularity">Popularité</label>
+            <input type="range" id="weightPopularity" min="0" max="10" value="5" step="1">
+            <span class="weight-value" id="valPopularity">5</span>
+          </div>
+
+          <div class="weight-group">
+            <label for="weightRating">Note</label>
+            <input type="range" id="weightRating" min="0" max="10" value="5" step="1">
+            <span class="weight-value" id="valRating">5</span>
+          </div>
+
+          <div class="weight-group">
+            <label for="weightRecency">Récent (année min)</label>
+            <input type="range" id="weightRecency" min="1970" max="2026" value="1970" step="1">
+            <span class="weight-value" id="valRecency">1970</span>
+          </div>
+        </div>
+
+        <div id="recommendContent" class="loading">Chargement...</div>
+      </div>
+    `;
+
+    // Événements sliders : recalculer en temps réel
+    ['weightPopularity', 'weightRating', 'weightRecency'].forEach(id => {
+      const slider = document.getElementById(id);
+      const valueSpan = document.getElementById('val' + id.replace('weight', ''));
+      slider.addEventListener('input', () => {
+        valueSpan.textContent = slider.value;
+        rankAndDisplay();
+      });
+    });
+
+    // Charger les films et afficher
+    await loadAndRankMovies();
   });
 
   // Page 404
@@ -422,6 +484,103 @@ function displayActiveFilters(genreValue, yearValue, ratingValue, languageValue)
 }
 
 /**
+ * Charge les films depuis l'API et lance le classement
+ */
+async function loadAndRankMovies() {
+  const resultsDiv = document.getElementById('recommendContent');
+
+  try {
+    const results = await TMDB_API.discoverMovies({ sort_by: 'popularity.desc' }, 1);
+    recommendMoviesCache = results.results;
+    rankAndDisplay();
+  } catch (error) {
+    resultsDiv.innerHTML = `<p class="error">Erreur: ${error.message}</p>`;
+  }
+}
+
+/**
+ * Calcule le score pondéré et réaffiche les films triés
+ */
+function rankAndDisplay() {
+  const resultsDiv = document.getElementById('recommendContent');
+  if (!recommendMoviesCache || recommendMoviesCache.length === 0) {
+    resultsDiv.innerHTML = '<div class="no-results"><p>Aucun film disponible.</p></div>';
+    return;
+  }
+
+  // Lire les valeurs des sliders
+  const wPop = parseInt(document.getElementById('weightPopularity').value);
+  const wNote = parseInt(document.getElementById('weightRating').value);
+  const wRecent = parseInt(document.getElementById('weightRecency').value);
+
+  const currentYear = new Date().getFullYear();
+
+  // Filtrer les films selon les seuils minimums des sliders
+  let filtered = recommendMoviesCache;
+
+  // Note : valeur directe (0-10 correspond à vote_average)
+  if (wNote > 0) {
+    filtered = filtered.filter(m => (m.vote_average || 0) >= wNote);
+  }
+
+  // Récent : la valeur du slider est directement l'année minimum
+  if (wRecent > 1970) {
+    filtered = filtered.filter(m => {
+      const year = m.release_date ? parseInt(m.release_date.split('-')[0]) : 0;
+      return year >= wRecent;
+    });
+  }
+
+  // Popularité : filtrer sur le seuil normalisé du jeu de données
+  if (wPop > 0) {
+    const popularities = recommendMoviesCache.map(m => m.popularity || 0);
+    const popMin = Math.min(...popularities);
+    const popMax = Math.max(...popularities);
+    const popRange = popMax - popMin || 1;
+    const popThreshold = popMin + (wPop / 10) * popRange;
+    filtered = filtered.filter(m => (m.popularity || 0) >= popThreshold);
+  }
+
+  // Aucun film après filtrage
+  if (filtered.length === 0) {
+    resultsDiv.innerHTML = `
+      <div class="no-results">
+        <p>Aucun film ne correspond à ces critères.</p>
+        <p>Essayez de baisser les curseurs.</p>
+      </div>
+    `;
+    return;
+  }
+
+  // Calculer le score pondéré pour trier les films restants
+  const popValues = filtered.map(m => m.popularity || 0);
+  const fPopMin = Math.min(...popValues);
+  const fPopRange = Math.max(...popValues) - fPopMin || 1;
+  const yearBase = 1900;
+  const yearRange = currentYear - yearBase || 1;
+
+  const scored = filtered.map(movie => {
+    const popNorm = ((movie.popularity || 0) - fPopMin) / fPopRange;
+    const ratingNorm = (movie.vote_average || 0) / 10;
+    const movieYear = movie.release_date ? parseInt(movie.release_date.split('-')[0]) : yearBase;
+    const recencyNorm = (movieYear - yearBase) / yearRange;
+
+    // Poids récence normalisé (0-10) à partir de l'année slider
+    const wRecentNorm = Math.round((wRecent - 1970) / (currentYear - 1970) * 10);
+    const totalWeight = wPop + wNote + wRecentNorm;
+    const rawScore = (wPop * popNorm) + (wNote * ratingNorm) + (wRecentNorm * recencyNorm);
+    const score = totalWeight > 0 ? (rawScore / totalWeight) * 10 : 0;
+
+    return { ...movie, _score: score };
+  });
+
+  // Trier par score décroissant
+  scored.sort((a, b) => b._score - a._score);
+
+  resultsDiv.innerHTML = generateMovieGrid(scored);
+}
+
+/**
  * Génère la grille de films en HTML
  */
 function generateMovieGrid(movies) {
@@ -439,7 +598,7 @@ function generateMovieGrid(movies) {
             class="movie-poster"
           >
           <h3>${movie.title}</h3>
-          <p class="rating">⭐ ${movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A'}/10</p>
+          <p class="rating">⭐ ${movie._score !== undefined ? movie._score.toFixed(1) : (movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A')}/10</p>
           <p class="release-date">${movie.release_date ? movie.release_date.split('-')[0] : 'N/A'}</p>
         </div>
       `
