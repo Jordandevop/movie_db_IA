@@ -36,6 +36,7 @@ async function initializeApp() {
   }
 
   setupRoutes();
+  setupMovieCardNavigation();
   router.init();
 }
 
@@ -88,22 +89,44 @@ async function handleApiKeySubmit() {
 }
 
 /**
+ * Génère le HTML de la barre de navigation
+ */
+function generateNavbar() {
+  return `
+    <nav class="navbar">
+      <h1>🎬 MovieDB Recommandation</h1>
+      <ul class="nav-links">
+        <li><a href="#/home" data-route="/home">Accueil</a></li>
+        <li><a href="#/search" data-route="/search">Recherche</a></li>
+        <li><a href="#/popular" data-route="/popular">Populaires</a></li>
+        <li><a href="#/discover" data-route="/discover">Découvrir</a></li>
+        <li><a href="#/recommend" data-route="/recommend">Recommandation</a></li>
+      </ul>
+    </nav>
+  `;
+}
+
+/**
+ * Écoute les clics sur les cartes de films pour naviguer vers les détails/similaires
+ */
+function setupMovieCardNavigation() {
+  document.addEventListener('click', (e) => {
+    const card = e.target.closest('.movie-card[data-movie-id]');
+    if (card) {
+      const movieId = card.getAttribute('data-movie-id');
+      router.navigate('/similar', { movieId });
+    }
+  });
+}
+
+/**
  * Définit toutes les routes de l'application
  */
 function setupRoutes() {
   // Page d'accueil
   router.register('/home', async () => {
     appContainer.innerHTML = `
-      <nav class="navbar">
-        <h1>🎬 MovieDB Recommandation</h1>
-        <ul class="nav-links">
-          <li><a href="#/home" data-route="/home">Accueil</a></li>
-          <li><a href="#/search" data-route="/search">Recherche</a></li>
-          <li><a href="#/popular" data-route="/popular">Populaires</a></li>
-          <li><a href="#/discover" data-route="/discover">Découvrir</a></li>
-          <li><a href="#/recommend" data-route="/recommend">Recommandation</a></li>
-        </ul>
-      </nav>
+      ${generateNavbar()}
       <div class="container">
         <section class="hero">
           <h2>Bienvenue sur MovieDB</h2>
@@ -124,16 +147,7 @@ function setupRoutes() {
   // Page de recherche
   router.register('/search', async () => {
     appContainer.innerHTML = `
-      <nav class="navbar">
-        <h1>🎬 MovieDB Recommandation</h1>
-        <ul class="nav-links">
-          <li><a href="#/home" data-route="/home">Accueil</a></li>
-          <li><a href="#/search" data-route="/search">Recherche</a></li>
-          <li><a href="#/popular" data-route="/popular">Populaires</a></li>
-          <li><a href="#/discover" data-route="/discover">Découvrir</a></li>
-          <li><a href="#/recommend" data-route="/recommend">Recommandation</a></li>
-        </ul>
-      </nav>
+      ${generateNavbar()}
       <div class="container">
         <h2>Rechercher un Film</h2>
         <div class="search-form">
@@ -169,16 +183,7 @@ function setupRoutes() {
   // Page filme populaires
   router.register('/popular', async () => {
     appContainer.innerHTML = `
-      <nav class="navbar">
-        <h1>🎬 MovieDB Recommandation</h1>
-        <ul class="nav-links">
-          <li><a href="#/home" data-route="/home">Accueil</a></li>
-          <li><a href="#/search" data-route="/search">Recherche</a></li>
-          <li><a href="#/popular" data-route="/popular">Populaires</a></li>
-          <li><a href="#/discover" data-route="/discover">Découvrir</a></li>
-          <li><a href="#/recommend" data-route="/recommend">Recommandation</a></li>
-        </ul>
-      </nav>
+      ${generateNavbar()}
       <div class="container">
         <h2>Films Populaires</h2>
         <div id="movieList" class="loading">Chargement...</div>
@@ -191,16 +196,7 @@ function setupRoutes() {
   // Page découvrir avec filtrage multi-critères
   router.register('/discover', async () => {
     appContainer.innerHTML = `
-      <nav class="navbar">
-        <h1>🎬 MovieDB Recommandation</h1>
-        <ul class="nav-links">
-          <li><a href="#/home" data-route="/home">Accueil</a></li>
-          <li><a href="#/search" data-route="/search">Recherche</a></li>
-          <li><a href="#/popular" data-route="/popular">Populaires</a></li>
-          <li><a href="#/discover" data-route="/discover">Découvrir</a></li>
-          <li><a href="#/recommend" data-route="/recommend">Recommandation</a></li>
-        </ul>
-      </nav>
+      ${generateNavbar()}
       <div class="container">
         <h2>Découvrir des Films</h2>
 
@@ -294,16 +290,7 @@ function setupRoutes() {
   // Page recommandation avec pondération configurable
   router.register('/recommend', async () => {
     appContainer.innerHTML = `
-      <nav class="navbar">
-        <h1>🎬 MovieDB Recommandation</h1>
-        <ul class="nav-links">
-          <li><a href="#/home" data-route="/home">Accueil</a></li>
-          <li><a href="#/search" data-route="/search">Recherche</a></li>
-          <li><a href="#/popular" data-route="/popular">Populaires</a></li>
-          <li><a href="#/discover" data-route="/discover">Découvrir</a></li>
-          <li><a href="#/recommend" data-route="/recommend">Recommandation</a></li>
-        </ul>
-      </nav>
+      ${generateNavbar()}
       <div class="container">
         <h2>Recommandation Personnalisée</h2>
         <p class="recommend-intro">Ajustez les curseurs pour personnaliser le classement des films selon vos préférences.</p>
@@ -344,6 +331,71 @@ function setupRoutes() {
 
     // Charger les films et afficher
     await loadAndRankMovies();
+  });
+
+  // Page détail film + films similaires
+  router.register('/similar', async (params) => {
+    const movieId = params.movieId;
+    if (!movieId) {
+      router.navigate('/home');
+      return;
+    }
+
+    appContainer.innerHTML = `
+      ${generateNavbar()}
+      <div class="container">
+        <button class="btn btn-secondary btn-back" onclick="history.back()">Retour</button>
+        <div id="movieDetail" class="loading">Chargement du film...</div>
+        <div id="similarMovies"></div>
+      </div>
+    `;
+
+    try {
+      const [movie, similarData] = await Promise.all([
+        TMDB_API.getMovieDetails(movieId),
+        TMDB_API.getSimilarMovies(movieId),
+      ]);
+
+      const imageBaseUrl = 'https://image.tmdb.org/t/p/w500';
+      const genres = movie.genres ? movie.genres.map(g => g.name).join(', ') : 'N/A';
+
+      document.getElementById('movieDetail').innerHTML = `
+        <div class="movie-detail">
+          <img
+            src="${movie.poster_path ? imageBaseUrl + movie.poster_path : '/assets/placeholder.jpg'}"
+            alt="${movie.title}"
+            class="movie-detail-poster"
+          >
+          <div class="movie-detail-info">
+            <h2>${movie.title}</h2>
+            <p class="movie-detail-meta">
+              ${movie.release_date ? movie.release_date.split('-')[0] : 'N/A'} | ${genres}
+            </p>
+            <p class="movie-detail-rating">⭐ ${movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A'}/10</p>
+            <p class="movie-detail-overview">${movie.overview || 'Aucun synopsis disponible.'}</p>
+          </div>
+        </div>
+      `;
+
+      const similarContainer = document.getElementById('similarMovies');
+      if (similarData.results && similarData.results.length > 0) {
+        similarContainer.innerHTML = `
+          <div class="similar-section">
+            <h3>Films Similaires</h3>
+            ${generateMovieGrid(similarData.results)}
+          </div>
+        `;
+      } else {
+        similarContainer.innerHTML = `
+          <div class="similar-section">
+            <h3>Films Similaires</h3>
+            <p class="no-results-text">Aucun film similaire trouvé.</p>
+          </div>
+        `;
+      }
+    } catch (error) {
+      document.getElementById('movieDetail').innerHTML = `<p class="error">Erreur: ${error.message}</p>`;
+    }
   });
 
   // Page 404
@@ -559,6 +611,20 @@ function rankAndDisplay() {
   const yearBase = 1900;
   const yearRange = currentYear - yearBase || 1;
 
+  // Déterminer dynamiquement les genres "favoris" à partir des films filtrés
+  // (genres les plus fréquents dans cette sélection)
+  const genreFrequency = {};
+  filtered.forEach((movie) => {
+    (movie.genre_ids || []).forEach((genreId) => {
+      genreFrequency[genreId] = (genreFrequency[genreId] || 0) + 1;
+    });
+  });
+
+  const favoriteGenreIds = Object.entries(genreFrequency)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([id]) => parseInt(id, 10));
+
   const scored = filtered.map(movie => {
     const popNorm = ((movie.popularity || 0) - fPopMin) / fPopRange;
     const ratingNorm = (movie.vote_average || 0) / 10;
@@ -571,7 +637,31 @@ function rankAndDisplay() {
     const rawScore = (wPop * popNorm) + (wNote * ratingNorm) + (wRecentNorm * recencyNorm);
     const score = totalWeight > 0 ? (rawScore / totalWeight) * 10 : 0;
 
-    return { ...movie, _score: score };
+    // Déterminer les critères explicatifs dominants pour ce film
+    const isHighRating = (movie.vote_average || 0) >= 7.5;
+    const isRecent = movieYear >= currentYear - 5;
+    const matchesFavoriteGenres =
+      favoriteGenreIds.length > 0 &&
+      (movie.genre_ids || []).some((id) => favoriteGenreIds.includes(id));
+
+    const explanation = {
+      highRating: isHighRating,
+      recent: isRecent,
+      matchesFavoriteGenres,
+    };
+
+    // Si aucun critère n'est vrai, on force au moins celui qui contribue le plus
+    if (!explanation.highRating && !explanation.recent && !explanation.matchesFavoriteGenres) {
+      const contribRating = ratingNorm;
+      const contribRecency = recencyNorm;
+      if (contribRating >= contribRecency) {
+        explanation.highRating = true;
+      } else {
+        explanation.recent = true;
+      }
+    }
+
+    return { ...movie, _score: score, _explanation: explanation };
   });
 
   // Trier par score décroissant
@@ -591,15 +681,41 @@ function generateMovieGrid(movies) {
       ${movies
         .map(
           (movie) => `
-        <div class="movie-card">
-          <img 
-            src="${movie.poster_path ? imageBaseUrl + movie.poster_path : '/assets/placeholder.jpg'}" 
+        <div class="movie-card" data-movie-id="${movie.id}">
+          <img
+            src="${movie.poster_path ? imageBaseUrl + movie.poster_path : '/assets/placeholder.jpg'}"
             alt="${movie.title}"
             class="movie-poster"
           >
           <h3>${movie.title}</h3>
           <p class="rating">⭐ ${movie._score !== undefined ? movie._score.toFixed(1) : (movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A')}/10</p>
           <p class="release-date">${movie.release_date ? movie.release_date.split('-')[0] : 'N/A'}</p>
+          ${
+            movie._explanation
+              ? `
+          <div class="recommend-explanation">
+            <p class="recommend-explanation-title">Recommandé car :</p>
+            <ul class="recommend-explanation-list">
+              ${
+                movie._explanation.highRating
+                  ? '<li>✔ Note élevée</li>'
+                  : ''
+              }
+              ${
+                movie._explanation.recent
+                  ? '<li>✔ Film récent</li>'
+                  : ''
+              }
+              ${
+                movie._explanation.matchesFavoriteGenres
+                  ? '<li>✔ Correspond à vos genres favoris</li>'
+                  : ''
+              }
+            </ul>
+          </div>
+          `
+              : ''
+          }
         </div>
       `
         )

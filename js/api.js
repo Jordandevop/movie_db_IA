@@ -53,6 +53,19 @@ class TMDB_API {
   }
 
   /**
+   * Récupère les films similaires à un film donné
+   * @param {number} movieId - ID du film
+   * @param {number} page - Numéro de la page (défaut: 1)
+   * @returns {Promise<Object>} Liste des films similaires
+   */
+  static async getSimilarMovies(movieId, page = 1) {
+    if (!movieId) {
+      throw new Error('L\'ID du film est requis');
+    }
+    return this._fetchMovies(`/movie/${movieId}/similar`, { page, language: 'fr-FR' });
+  }
+
+  /**
    * Récupère les genres disponibles
    * @returns {Promise<Object>} Liste des genres
    */
