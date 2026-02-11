@@ -1,11 +1,41 @@
 <!DOCTYPE html>
-<html lang="FR">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Movie DB</title>
+    <meta name="description" content="Moteur de recommandation intelligent de films utilisant l'API TMDB">
+    <meta name="author" content="Jordan">
+    <meta name="keywords" content="films, recommandation, TMDB, cinéma">
+    
+    <title>🎬 MovieDB - Moteur de Recommandation de Films</title>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/style.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>🎬</text></svg>">
 </head>
 <body>
+    <!-- Conteneur principal de l'application -->
+    <div id="app">
+        <div style="display: flex; justify-content: center; align-items: center; height: 100vh; color: #f5f5f1;">
+            <div style="text-align: center;">
+                <h1 style="font-size: 48px; margin-bottom: 20px; color: #e50914;">🎬</h1>
+                <p>Initialisation de l'application...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts de configuration -->
+    <script src="js/config.js"></script>
     
+    <!-- Scripts de l'API -->
+    <script src="js/api.js"></script>
+    
+    <!-- Script du routeur -->
+    <script src="js/router.js"></script>
+    
+    <!-- Script principal -->
+    <script src="js/main.js"></script>
 </body>
 </html>

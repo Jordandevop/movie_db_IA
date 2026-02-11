@@ -1,0 +1,36 @@
+{
+  "name": "movie_db_recommendation_engine",
+  "version": "1.0.0",
+  "description": "Mini moteur de recommandation intelligent de films utilisant l'API TMDB",
+  "main": "index.html",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "sass:watch": "sass --watch css:css --style=compressed",
+    "sass:build": "sass css/style.scss css/style.css --style=compressed"
+  },
+  "keywords": [
+    "films",
+    "recommandation",
+    "TMDB",
+    "cinéma",
+    "SPA",
+    "JavaScript",
+    "HTML",
+    "CSS",
+    "SASS"
+  ],
+  "author": "Jordan",
+  "license": "MIT",
+  "devDependencies": {
+    "sass": "^1.69.5"
+  },
+  "dependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/votre-username/movie_db_Ia"
+  },
+  "bugs": {
+    "url": "https://github.com/votre-username/movie_db_Ia/issues"
+  },
+  "homepage": "https://github.com/votre-username/movie_db_Ia#readme"
+}
