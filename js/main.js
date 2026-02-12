@@ -101,6 +101,7 @@ function generateNavbar() {
         <li><a href="#/popular" data-route="/popular">Populaires</a></li>
         <li><a href="#/discover" data-route="/discover">Découvrir</a></li>
         <li><a href="#/recommend" data-route="/recommend">Recommandation</a></li>
+        <li><a href="#/dashboard" data-route="/dashboard">Dashboard</a></li>
       </ul>
     </nav>
   `;
@@ -398,6 +399,33 @@ function setupRoutes() {
     }
   });
 
+  // Page dashboard statistiques
+  router.register('/dashboard', async () => {
+    appContainer.innerHTML = `
+      ${generateNavbar()}
+      <div class="container">
+        <h2>Dashboard Statistiques</h2>
+        <p class="dashboard-intro">Analyse des films populaires du moment.</p>
+        <div id="dashboardContent" class="loading">Chargement des donnees...</div>
+      </div>
+    `;
+
+    try {
+      const [page1, page2, page3, genres] = await Promise.all([
+        TMDB_API.getPopularMovies(1),
+        TMDB_API.getPopularMovies(2),
+        TMDB_API.getPopularMovies(3),
+        loadGenres(),
+      ]);
+
+      const allMovies = [...page1.results, ...page2.results, ...page3.results];
+      const stats = computeStats(allMovies, genres);
+      document.getElementById('dashboardContent').innerHTML = renderDashboard(stats);
+    } catch (error) {
+      document.getElementById('dashboardContent').innerHTML = `<p class="error">Erreur: ${error.message}</p>`;
+    }
+  });
+
   // Page 404
   router.register('/not-found', async () => {
     appContainer.innerHTML = `
@@ -668,6 +696,109 @@ function rankAndDisplay() {
   scored.sort((a, b) => b._score - a._score);
 
   resultsDiv.innerHTML = generateMovieGrid(scored);
+}
+
+/**
+ * Calcule les statistiques a partir d'une liste de films
+ * @param {Array} movies - Liste des films
+ * @param {Array} genres - Liste des genres {id, name}
+ * @returns {Object} Statistiques calculees
+ */
+function computeStats(movies, genres) {
+  const genreMap = {};
+  genres.forEach(g => { genreMap[g.id] = g.name; });
+
+  // Moyenne des notes
+  const totalRating = movies.reduce((sum, m) => sum + (m.vote_average || 0), 0);
+  const averageRating = movies.length > 0 ? totalRating / movies.length : 0;
+
+  // Film le plus populaire
+  const mostPopular = movies.reduce((best, m) =>
+    (m.popularity || 0) > (best.popularity || 0) ? m : best
+  , movies[0]);
+
+  // Film le plus recent
+  const mostRecent = movies.reduce((best, m) => {
+    const bestDate = best.release_date || '';
+    const currDate = m.release_date || '';
+    return currDate > bestDate ? m : best;
+  }, movies[0]);
+
+  // Repartition par genre
+  const genreCount = {};
+  movies.forEach(m => {
+    (m.genre_ids || []).forEach(id => {
+      const name = genreMap[id] || `Genre ${id}`;
+      genreCount[name] = (genreCount[name] || 0) + 1;
+    });
+  });
+
+  const genreDistribution = Object.entries(genreCount)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count);
+
+  const maxCount = genreDistribution.length > 0 ? genreDistribution[0].count : 1;
+  genreDistribution.forEach(g => {
+    g.percentage = Math.round((g.count / maxCount) * 100);
+  });
+
+  return { averageRating, mostPopular, mostRecent, genreDistribution, totalMovies: movies.length };
+}
+
+/**
+ * Genere le HTML du dashboard
+ * @param {Object} stats - Statistiques calculees par computeStats
+ * @returns {string} HTML du dashboard
+ */
+function renderDashboard(stats) {
+  const imageBaseUrl = 'https://image.tmdb.org/t/p/w500';
+
+  const genreBars = stats.genreDistribution.map(g => `
+    <div class="genre-bar-row">
+      <span class="genre-bar-label">${g.name}</span>
+      <div class="genre-bar">
+        <div class="genre-bar-fill" style="width: ${g.percentage}%"></div>
+      </div>
+      <span class="genre-bar-count">${g.count}</span>
+    </div>
+  `).join('');
+
+  return `
+    <div class="dashboard-stats">
+      <div class="stat-card">
+        <span class="stat-label">Moyenne des notes</span>
+        <span class="stat-value">${stats.averageRating.toFixed(1)}<small>/10</small></span>
+        <span class="stat-detail">${stats.totalMovies} films analyses</span>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">Film le plus populaire</span>
+        <img
+          src="${stats.mostPopular.poster_path ? imageBaseUrl + stats.mostPopular.poster_path : '/assets/placeholder.jpg'}"
+          alt="${stats.mostPopular.title}"
+          class="stat-card-poster"
+        >
+        <span class="stat-value-title">${stats.mostPopular.title}</span>
+        <span class="stat-detail">Popularite: ${Math.round(stats.mostPopular.popularity)}</span>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">Film le plus recent</span>
+        <img
+          src="${stats.mostRecent.poster_path ? imageBaseUrl + stats.mostRecent.poster_path : '/assets/placeholder.jpg'}"
+          alt="${stats.mostRecent.title}"
+          class="stat-card-poster"
+        >
+        <span class="stat-value-title">${stats.mostRecent.title}</span>
+        <span class="stat-detail">Sortie: ${stats.mostRecent.release_date || 'N/A'}</span>
+      </div>
+    </div>
+
+    <div class="genre-chart">
+      <h3>Repartition par genre</h3>
+      ${genreBars}
+    </div>
+  `;
 }
 
 /**

@@ -652,6 +652,120 @@ body {
   color: $success-color;
 }
 
+// Page Dashboard Statistiques
+.dashboard-intro {
+  color: $light-color;
+  font-size: 15px;
+  margin-bottom: 20px;
+}
+
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.stat-card {
+  background-color: $secondary-color;
+  border: 1px solid $border-color;
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+}
+
+.stat-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: $light-color;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 36px;
+  font-weight: 700;
+  color: $primary-color;
+
+  small {
+    font-size: 18px;
+    color: $light-color;
+  }
+}
+
+.stat-value-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: $text-color;
+  line-height: 1.3;
+}
+
+.stat-detail {
+  font-size: 12px;
+  color: $light-color;
+}
+
+.stat-card-poster {
+  width: 80px;
+  border-radius: 4px;
+  aspect-ratio: 2/3;
+  object-fit: cover;
+  background-color: $border-color;
+}
+
+.genre-chart {
+  background-color: $secondary-color;
+  border: 1px solid $border-color;
+  border-radius: 8px;
+  padding: 25px;
+
+  h3 {
+    font-size: 18px;
+    color: $text-color;
+    margin-bottom: 20px;
+  }
+}
+
+.genre-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.genre-bar-label {
+  min-width: 120px;
+  font-size: 13px;
+  color: $light-color;
+  text-align: right;
+}
+
+.genre-bar {
+  flex: 1;
+  height: 20px;
+  background-color: $border-color;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.genre-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, $primary-color, lighten($primary-color, 15%));
+  border-radius: 4px;
+  transition: width 0.6s ease;
+}
+
+.genre-bar-count {
+  min-width: 30px;
+  font-size: 13px;
+  font-weight: 600;
+  color: $primary-color;
+}
+
 // Réactivité
 @media (max-width: 768px) {
   .navbar {
@@ -710,5 +824,14 @@ body {
     flex-direction: column;
     gap: 20px;
     padding: 15px;
+  }
+
+  .dashboard-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .genre-bar-label {
+    min-width: 80px;
+    font-size: 12px;
   }
 }
