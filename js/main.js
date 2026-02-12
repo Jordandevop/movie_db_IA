@@ -438,19 +438,129 @@ function setupRoutes() {
   });
 }
 
+/* ===================== 🧠 MOTEUR DE SCORING ===================== */
+
+/* ===================== 🧠 SYSTÈME DE SCORING ===================== */
+
+/**
+ * Normalise une valeur entre 0 et 1
+ */
+function normalize(value, min, max) {
+  if (max === min) return 0;
+  return (value - min) / (max - min);
+}
+
+/**
+ * Calcule le score personnalisé des films
+ */
+function computeMovieScores(movies) {
+  if (!movies || movies.length === 0) return [];
+
+  const voteMin = Math.min(...movies.map(m => m.vote_average || 0));
+  const voteMax = Math.max(...movies.map(m => m.vote_average || 10));
+  const popMin = Math.min(...movies.map(m => m.popularity || 0));
+  const popMax = Math.max(...movies.map(m => m.popularity || 100));
+  const votesMin = Math.min(...movies.map(m => m.vote_count || 0));
+  const votesMax = Math.max(...movies.map(m => m.vote_count || 1000));
+  const yearMin = Math.min(...movies.map(m => parseInt(m.release_date?.split("-")[0]) || 1900));
+  const yearMax = Math.max(...movies.map(m => parseInt(m.release_date?.split("-")[0]) || new Date().getFullYear()));
+
+  const WEIGHT_VOTE = 0.4;
+  const WEIGHT_POP = 0.25;
+  const WEIGHT_VOTES = 0.2;
+  const WEIGHT_RECENT = 0.15;
+  const currentYear = new Date().getFullYear();
+
+  return movies.map(movie => {
+    const normalizedVote = normalize(movie.vote_average || 0, voteMin, voteMax);
+    const normalizedPop = normalize(movie.popularity || 0, popMin, popMax);
+    const normalizedVotes = normalize(Math.log10((movie.vote_count || 0) + 1), Math.log10(votesMin + 1), Math.log10(votesMax + 1));
+
+    const releaseYear = movie.release_date ? parseInt(movie.release_date.split("-")[0]) : currentYear;
+    const recencyScore = normalize(releaseYear, yearMin, yearMax);
+
+    movie.score = normalizedVote * WEIGHT_VOTE +
+                  normalizedPop * WEIGHT_POP +
+                  normalizedVotes * WEIGHT_VOTES +
+                  recencyScore * WEIGHT_RECENT;
+
+    return movie;
+  });
+}
+function renderMovieSection(containerId) {
+  const container = document.getElementById(containerId);
+
+  // Si c'est la première fois qu'on appelle, on crée les contrôles et la grille
+  if (!container.querySelector("#movieGridContainer")) {
+    const controls = document.createElement("div");
+    controls.className = "movie-controls";
+
+    const sortBtn = document.createElement("button");
+    sortBtn.id = "sortScoreBtn";
+    sortBtn.textContent = isSortedByScore ? "↺ Ordre original" : "⭐ Trier par score";
+
+    sortBtn.addEventListener("click", () => {
+      toggleSort();
+      document.getElementById("movieGridContainer").innerHTML = generateMovieGrid(currentMovies);
+      sortBtn.textContent = isSortedByScore ? "↺ Ordre original" : "⭐ Trier par score";
+    });
+
+    controls.appendChild(sortBtn);
+    container.appendChild(controls);
+
+    const grid = document.createElement("div");
+    grid.id = "movieGridContainer";
+    grid.innerHTML = generateMovieGrid(currentMovies);
+    container.appendChild(grid);
+  } else {
+    // si déjà présent, on met juste à jour la grille
+    document.getElementById("movieGridContainer").innerHTML = generateMovieGrid(currentMovies);
+    document.getElementById("sortScoreBtn").textContent = isSortedByScore ? "↺ Ordre original" : "⭐ Trier par score";
+  }
+}
 /**
  * Affiche les films populaires
  */
 async function displayPopularMovies() {
   try {
     const results = await TMDB_API.getPopularMovies(1);
-    const moviesHTML = generateMovieGrid(results.results);
-    document.getElementById('movieList').innerHTML = moviesHTML;
+
+    currentMovies = computeMovieScores(results.results); // PAS trié
+    isSortedByScore = false;
+    renderMovieSection("movieList");
+
+    const movieListContainer = document.getElementById('movieList');
+    movieListContainer.innerHTML = `
+      <div class="movie-nav">
+        <button id="sortScoreBtn" class="btn btn-secondary">
+          ⭐ Trier par score
+        </button>
+      </div>
+      <div id="movieGridContainer">
+        ${generateMovieGrid(currentMovies)}
+      </div>
+    `;
+
+    document.getElementById('sortScoreBtn').addEventListener('click', () => {
+      toggleSort();
+      document.getElementById('movieGridContainer').innerHTML = generateMovieGrid(currentMovies);
+      document.getElementById('sortScoreBtn').textContent = isSortedByScore ? '↺ Ordre original' : '⭐ Trier par score';
+    });
+
   } catch (error) {
     document.getElementById('movieList').innerHTML = `<p class="error">Erreur: ${error.message}</p>`;
   }
 }
 
+function toggleSort() {
+  if (!isSortedByScore) {
+    currentMovies.sort((a, b) => b.score - a.score);
+    isSortedByScore = true;
+  } else {
+    currentMovies.sort((a, b) => b.popularity - a.popularity);
+    isSortedByScore = false;
+  }
+}
 /**
  * Affiche les résultats de recherche
  */
@@ -819,7 +929,8 @@ function generateMovieGrid(movies) {
             class="movie-poster"
           >
           <h3>${movie.title}</h3>
-          <p class="rating">⭐ ${movie._score !== undefined ? movie._score.toFixed(1) : (movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A')}/10</p>
+          <p class="rating">⭐ ${movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A'}/10</p>
+          <p>🧠 Score : ${movie.score?.toFixed(3) || "-"}</p>
           <p class="release-date">${movie.release_date ? movie.release_date.split('-')[0] : 'N/A'}</p>
           ${
             movie._explanation
